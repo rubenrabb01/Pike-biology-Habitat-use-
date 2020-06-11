@@ -1,9 +1,10 @@
 
+
 ## 1. Load data and transform variables
 
 setwd("C:/IBU/Fishecudb/")
 
-library(tidyverse)
+:books:`library(tidyverse)`
 
 ```
 open_water_prop <- data.table(read_csv("open_water_prop.csv"))
@@ -42,7 +43,7 @@ k1size      0.005441638  0.155270414 -0.06519901 -0.08823289 -0.06144069  1.0000
 
 ### 3.1. Fit a linear mixed-effects model using package _nlme_
 
-library(nlme)
+:books:`library(nlme)`
 
 #### 3.1.1. Full model
 
@@ -96,7 +97,7 @@ Standardized Within-Group Residuals:
 
 Number of Observations: 1946
 Number of Groups: 25
-
+```
 ```
 vif(model.ow.f)
 ```
@@ -109,7 +110,7 @@ vif(model.ow.f)
 
 #### 3.1.3. Final model (scaled predictors)
 
-library(dplyr)
+:books:`library(dplyr)`
 
 ```
 open_water_prop_scale_p<-open_water_prop %>% mutate_at(c(7,11), funs(c(scale(.))))
@@ -156,7 +157,7 @@ Standardized Within-Group Residuals:
 
 Number of Observations: 1946
 Number of Groups: 25
-
+```
 ```
 vif(model.ow.f_scale_p)
 ```
@@ -167,9 +168,9 @@ vif(model.ow.f_scale_p)
 
 ### 3.2. Fit a beta regression model (distribution with logit/beta processes) using the package betareg
 
-library(betareg)
+:books:`library(betareg)`
 
-First we need to check if there are NAs for the variable _hab.prop_. We can do this with the following code:
+First, we need to check if there are NAs for the variable _hab.prop_. We can do this with the following code:
 ```
 open_water_prop[is.na(open_water_prop$hab.prop),]
 ```
@@ -299,7 +300,7 @@ open_water_prop$tag_id <- as.factor(open_water_prop$tag_id)
 
 #### 3.3.1. Using package _gamlss_
 
-library(gamlss)
+:books:`library(gamlss)`
 
 ```
 model.ow.f_beta_zi_gamlss <- gamlss(hab.prop ~  day_length*up_lake+tl_mm, data = open_water_prop ,random = ~1|tag_id, family = BEZI, correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
@@ -371,9 +372,9 @@ Global Deviance:     -8621.704
 
 #### 3.3.2. Using package _zoid_
 
-library(ggplot2)
-library(plotly)
-library(zoib)
+:books:`library(zoib)`
+:books:`library(ggplot2)`
+:books:`library(plotly)`
 
 The_zoib_ function fits a zero/one inflated beta regression model and obtains the Bayesian Inference for the model via the MCMC approach implemented in JAGS (Liu & Kong, 2015) (see [zoib R documentation](https://cran.r-project.org/web/packages/zoib/zoib.pdf)
 
@@ -524,7 +525,7 @@ model.ow.f_beta_zi_zoib3 <- zoib(hab.prop ~ day_length*up_lake+tl_mm| 1 | 1,
 
 #### 3.4.1. Using package _brms_
 
-library(brms)
+:books:`library(brms)`
 
 ```
 model.ow.f_beta_zi_brm1 <- brm(hab.prop ~ day_length*up_lake+tl_mm +(1|tag_id),
@@ -542,7 +543,7 @@ model.ow.f_beta_zi_brm2 <- brm(hab.prop ~ day_length*up_lake+tl_mm +(1|tag_id),
 ```
 #### 3.4.2. Using package _rstanarm_
 
-library(rstanarm)
+:books:`library(rstanarm)`
 
 ```
 open_water_prop <- as.data.table(open_water_prop)
@@ -566,4 +567,5 @@ model.ow.f_beta_zi_stan <- stan_betareg(hab.prop ~ day_length*up_lake+tl_mm +(da
 Liu, F. & Kong, Y. 2015. ZOIB: an R Package for Bayesian Inferences in Beta and Zero One Inflated Beta Regression Models, The R Journal, 7(2):34-51
 
 Smithson, M. & Verkuilen, J. 2006. "A Better Lemon Squeezer? Maximum-Likelihood Regression with Beta-Distributed Dependent Variables." Psychological Methods, 11 (1), 54–71
+
 
