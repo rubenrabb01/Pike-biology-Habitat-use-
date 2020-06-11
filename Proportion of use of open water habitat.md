@@ -50,7 +50,7 @@ k1size      0.005441638  0.155270414 -0.06519901 -0.08823289 -0.06144069  1.0000
 model.ow <- lme(asin(sqrt(hab.prop)) ~ temp.day*up_lake +day_length*up_lake+up_lake*tl_mm+temp.day*day_length, data = open_water_prop, random = ~1|tag_id, method = "REML", correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
 ```
 
-Lets **_compare_** estimates of regression coefficients with and without scaling predictors
+Lets compare estimates of regression coefficients with and without scaling predictors
 
 #### 3.1.2. Final model (unscaled predictors)
 
@@ -264,7 +264,7 @@ Number of iterations: 2363 (Nelder-Mead) + 5 (Fisher scoring)
 
 #### 3.2.2. Transform the response variable following the recommendations by Smithson & Verkuilen (2006)
 
-The R _betareg_ documentation mentions the distribution proposed by these authors, which takes the form:
+The R documentation for the **_betareg_** package mentions the distribution proposed by these authors, which takes the form:
 
 **y’ = (y*(N - 1) + .5)/N**, where N is the sample size
 
@@ -375,7 +375,7 @@ Global Deviance:     -8621.704
 :books:`library(ggplot2)`
 :books:`library(plotly)`
 
-The_zoib_ function fits a zero/one inflated beta regression model and obtains the Bayesian Inference for the model via the MCMC approach implemented in JAGS (Liu & Kong, 2015) (see [zoib R documentation](https://cran.r-project.org/web/packages/zoib/zoib.pdf)
+The **_zoib_** function fits a zero/one inflated beta regression model and obtains the Bayesian Inference for the model via the MCMC approach implemented in JAGS (Liu & Kong, 2015) (see [zoib R documentation](https://cran.r-project.org/web/packages/zoib/zoib.pdf))
 
 ```
 model.ow.f_beta_zi_zoib1 <- zoib(hab.prop ~ day_length*up_lake+tl_mm | 1 | 1,
@@ -565,6 +565,8 @@ model.ow.f_beta_zi_stan <- stan_betareg(hab.prop ~ day_length*up_lake+tl_mm +(da
 
 Liu, F. & Kong, Y. 2015. ZOIB: an R Package for Bayesian Inferences in Beta and Zero One Inflated Beta Regression Models, The R Journal, 7(2):34-51
 
-Smithson, M. & Verkuilen, J. 2006. "A Better Lemon Squeezer? Maximum-Likelihood Regression with Beta-Distributed Dependent Variables." Psychological Methods, 11 (1), 54–71
+Smithson, M. & Verkuilen, J. 2006. A Better Lemon Squeezer? Maximum-Likelihood Regression with Beta-Distributed Dependent Variables. Psychological Methods, 11 (1), 54–71
+
+
 
 
