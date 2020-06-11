@@ -50,7 +50,7 @@ k1size      0.005441638  0.155270414 -0.06519901 -0.08823289 -0.06144069  1.0000
 model.ow <- lme(asin(sqrt(hab.prop)) ~ temp.day*up_lake +day_length*up_lake+up_lake*tl_mm+temp.day*day_length, data = open_water_prop, random = ~1|tag_id, method = "REML", correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
 ```
 
-Lets compare estimates of regression coefficients with and without scaling predictors
+Lets **_compare_** estimates of regression coefficients with and without scaling predictors
 
 #### 3.1.2. Final model (unscaled predictors)
 
