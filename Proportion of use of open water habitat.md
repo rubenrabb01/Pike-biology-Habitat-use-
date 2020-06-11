@@ -423,10 +423,10 @@ centiles(model.ow.f_beta_zi_gamlss,xvar=open_water_prop$hab.prop)
 
 ```
 model.ow.f_beta_zi_gamlss_c.spline <- gamlss(hab.prop ~  scs(day_length, by="up_lake")+tl_mm,
-                                    data = open_water_prop,
-                                    random = ~1|tag_id,
-                                    family = BEZI,
-                                    correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
+                                      data = open_water_prop,
+                                      random = ~1|tag_id,
+                                      family = BEZI,
+                                      correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
 ```
 ```
 GAMLSS-RS iteration 1: Global Deviance = -8461.846
@@ -748,5 +748,4 @@ model.ow.f_beta_zi_stan <- stan_betareg(hab.prop ~ day_length*up_lake+tl_mm +(da
 - _Rigby, R. A. & Stasinopoulos, D. M_. 2005. Generalized additive models for location, scale and shape,(with discussion), Appl. Statist., 54, part 3, pp 507-554
 
 - _Smithson, M. & Verkuilen, J_. 2006. A Better Lemon Squeezer? Maximum-Likelihood Regression with Beta-Distributed Dependent Variables. Psychological Methods, 11 (1), 54–71
-
 
