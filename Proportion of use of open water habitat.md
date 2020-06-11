@@ -1,8 +1,6 @@
-
+# Proportion of time spent in open water of lakes
 
 ## 1. Load data and transform variables
-
-setwd("C:/IBU/Fishecudb/")
 
 :books:`library(tidyverse)`
 
@@ -17,14 +15,15 @@ open_water_prop<-horiz_move[with(open_water_prop, order(tag_id,up_lake, date)),]
 
 ## 2. Multicolinearity tests
 
-library(corrplot)
+:books:`library(corrplot)`
 
 ```
 corr<-cor(open_water_prop[,c(3,5,6,7,11,12)], use="pairwise", method="spearman")
 corrplot(corr,method="number")
 ```
+![Hab_prop](/Plots/Hab_prop_zoib1.png "Hab_prop")
 
-library(ppcor)
+:books:`library(ppcor)`
 
 ```
 pcor(open_water_prop[,c(3,5,6,7,11,12)],method = "pearson")$estimate
