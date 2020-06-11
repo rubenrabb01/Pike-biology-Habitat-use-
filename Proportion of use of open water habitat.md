@@ -21,7 +21,7 @@ open_water_prop<-horiz_move[with(open_water_prop, order(tag_id,up_lake, date)),]
 corr<-cor(open_water_prop[,c(3,5,6,7,11,12)], use="pairwise", method="spearman")
 corrplot(corr,method="number")
 ```
-![Hab_prop](/Plots/Hab_prop_zoib1.png "Hab_prop")
+![Hab_prop](/Plots/Hab_prop_zoib0.png "Hab_prop")
 
 :books:`library(ppcor)`
 
