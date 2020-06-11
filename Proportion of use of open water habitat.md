@@ -301,8 +301,16 @@ open_water_prop$tag_id <- as.factor(open_water_prop$tag_id)
 
 :books:`library(gamlss)`
 
+The GAMLSS documentation refers to the fitting of GAM models for Location Scale and Shape (Rigby and Stasinopoulos, 2005). The models use a distributional regression approach where all the parameters of the conditional distribution of the response variable are modelled using explanatory variables (see [zoib R documentation](https://cran.r-project.org/web/packages/gamlss/gamlss.pdf))
+
+##### 3.3.1.1. Fit final model
+
 ```
-model.ow.f_beta_zi_gamlss <- gamlss(hab.prop ~  day_length*up_lake+tl_mm, data = open_water_prop ,random = ~1|tag_id, family = BEZI, correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
+model.ow.f_beta_zi_gamlss <- gamlss(hab.prop ~  day_length*up_lake+tl_mm,
+                                    data = open_water_prop,
+                                    random = ~1|tag_id,
+                                    family = BEZI,
+                                    correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
 ```
 ```
 GAMLSS-RS iteration 1: Global Deviance = -8493.518
@@ -369,13 +377,183 @@ Global Deviance:     -8621.704
 ******************************************************************
 ```
 
+**Plot model**
+
+```
+plot(model.ow.f_beta_zi_gamlss)
+```
+```
+******************************************************************
+	 Summary of the Randomised Quantile Residuals
+                           mean   =  -0.1054905
+                       variance   =  0.8011242
+               coef. of skewness  =  1.354226
+               coef. of kurtosis  =  5.919767
+Filliben correlation coefficient  =  0.9499451
+******************************************************************
+```
+![Hab_prop](/Plots/Hab_prop_gamlss01.png "Hab_prop")
+
+**Plot the ACF and PACF of the residuals**
+
+```
+acfResid(model.ow.f_beta_zi_gamlss)
+```
+![Hab_prop](/Plots/Hab_prop_gamlss02.png "Hab_prop")
+
+**Plots the centile curves**
+
+```
+centiles(model.ow.f_beta_zi_gamlss,xvar=open_water_prop$hab.prop)
+```
+```
+% of cases below  0.4 centile is  0
+% of cases below  2 centile is  0
+% of cases below  10 centile is  0.8735868
+% of cases below  25 centile is  28.31449
+% of cases below  50 centile is  64.69681
+% of cases below  75 centile is  81.65468
+% of cases below  90 centile is  92.49743
+% of cases below  98 centile is  98.04728
+% of cases below  99.6 centile is  98.86948
+```
+![Hab_prop](/Plots/Hab_prop_gamlss03.png "Hab_prop")
+
+##### 3.3.1.2. Fit final model with cublic splines for _day_length_
+
+```
+model.ow.f_beta_zi_gamlss_c.spline <- gamlss(hab.prop ~  scs(day_length, by="up_lake")+tl_mm,
+                                    data = open_water_prop,
+                                    random = ~1|tag_id,
+                                    family = BEZI,
+                                    correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
+```
+```
+GAMLSS-RS iteration 1: Global Deviance = -8461.846
+GAMLSS-RS iteration 2: Global Deviance = -8538.867
+GAMLSS-RS iteration 3: Global Deviance = -8566.111
+GAMLSS-RS iteration 4: Global Deviance = -8575.328
+GAMLSS-RS iteration 5: Global Deviance = -8578.343
+GAMLSS-RS iteration 6: Global Deviance = -8579.309
+GAMLSS-RS iteration 7: Global Deviance = -8579.616
+GAMLSS-RS iteration 8: Global Deviance = -8579.713
+GAMLSS-RS iteration 9: Global Deviance = -8579.746
+GAMLSS-RS iteration 10: Global Deviance = -8579.755
+GAMLSS-RS iteration 11: Global Deviance = -8579.757
+GAMLSS-RS iteration 12: Global Deviance = -8579.759
+GAMLSS-RS iteration 13: Global Deviance = -8579.76
+```
+```
+summary(model.ow.f_beta_zi_gamlss_c.spline)
+```
+```
+******************************************************************
+Family:  c("BEZI", "Zero Inflated Beta")
+
+Call:  gamlss(formula = hab.prop ~ scs(day_length, by = "up_lake") +
+    tl_mm, family = BEZI, data = open_water_prop, random = ~1 |      tag_id, correlation = corARMA(value = c(0.4276, -0.9426),
+    ~date.num | tag_id, p = 1, q = 1))
+
+Fitting method: RS()
+
+------------------------------------------------------------------
+Mu link function:  logit
+Mu Coefficients:
+                                  Estimate Std. Error t value Pr(>|t|)
+(Intercept)                     -3.2726258  0.2706181 -12.093   <2e-16 ***
+scs(day_length, by = "up_lake") -0.0166307  0.0164947  -1.008    0.313
+tl_mm                            0.0020488  0.0001786  11.472   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+------------------------------------------------------------------
+Sigma link function:  log
+Sigma Coefficients:
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept)  0.55349    0.02473   22.38   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+------------------------------------------------------------------
+Nu link function:  logit
+Nu Coefficients:
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept)   -25.03    2266.88  -0.011    0.991
+
+------------------------------------------------------------------
+NOTE: Additive smoothing terms exist in the formulas:
+ i) Std. Error for smoothers are for the linear effect only.
+ii) Std. Error for the linear terms may not be reliable.
+------------------------------------------------------------------
+No. of observations in the fit:  1946
+Degrees of Freedom for the fit:  6.403116
+      Residual Deg. of Freedom:  1939.597
+                      at cycle:  13
+
+Global Deviance:     -8579.76
+            AIC:     -8566.954
+            SBC:     -8531.266
+******************************************************************
+```
+
+**Plot model**
+
+```
+plot(model.ow.f_beta_zi_gamlss_c.spline)
+```
+```
+******************************************************************
+	 Summary of the Randomised Quantile Residuals
+                           mean   =  -0.1033472
+                       variance   =  0.8072602
+               coef. of skewness  =  1.396926
+               coef. of kurtosis  =  5.814125
+Filliben correlation coefficient  =  0.9429908
+******************************************************************
+```
+![Hab_prop](/Plots/Hab_prop_gamlss04.png "Hab_prop")
+
+**Plot the ACF and PACF of the residuals**
+
+```
+acfResid(model.ow.f_beta_zi_gamlss_c.spline)
+```
+![Hab_prop](/Plots/Hab_prop_gamlss05.png "Hab_prop")
+
+**Plots the centile curves**
+
+```
+centiles(model.ow.f_beta_zi_gamlss_c.spline,xvar=open_water_prop$hab.prop)
+```
+```
+% of cases below  0.4 centile is  0
+% of cases below  2 centile is  0
+% of cases below  10 centile is  2.466598
+% of cases below  25 centile is  26.77287
+% of cases below  50 centile is  65.00514
+% of cases below  75 centile is  80.78109
+% of cases below  90 centile is  91.67523
+% of cases below  98 centile is  97.99589
+% of cases below  99.6 centile is  98.97225
+```
+![Hab_prop](/Plots/Hab_prop_gamlss06.png "Hab_prop")
+
+**Plot fitted model values (day length)**
+
+```
+data_ow.f_beta_zi_gamlss_c.spline <- visreg(model.ow.f_beta_zi_gamlss_c.spline, breaks = c ("Chabarovice", "Most"), gg = TRUE, overlay = TRUE, jitter = TRUE, lwd = 0.5, rug = FALSE, partial = FALSE, plot = FALSE)
+layout(matrix(1:2, nrow = 1))
+plot(data_ow.f_beta_zi_gamlss_c.spline, plot.type="rgl") + theme_bw()
+```
+![Hab_prop](/Plots/Hab_prop_gamlss07.png "Hab_prop")
+
 #### 3.3.2. Using package _zoid_
 
 :books:`library(zoib)`
 :books:`library(ggplot2)`
 :books:`library(plotly)`
 
-The **_zoib_** function fits a zero/one inflated beta regression model and obtains the Bayesian Inference for the model via the MCMC approach implemented in JAGS (Liu & Kong, 2015) (see [zoib R documentation](https://cran.r-project.org/web/packages/zoib/zoib.pdf))
+The **_zoib_** function fits a zero-one-inflated regression model and obtains the Bayesian Inference for the model via the MCMC approach implemented in JAGS (Liu & Kong, 2015) (see [zoib R documentation](https://cran.r-project.org/web/packages/zoib/zoib.pdf))
 
 ```
 model.ow.f_beta_zi_zoib1 <- zoib(hab.prop ~ day_length*up_lake+tl_mm | 1 | 1,
@@ -400,7 +578,7 @@ Sample size per chain = 200
 1. Empirical mean and standard deviation for each variable,
    plus standard error of the mean:
 
-                            Mean       SD  Naive SE Time-series SE
+                       Mean       SD       Naive SE Time-series SE
 (Intercept)            -3.345490 1.035671 5.178e-02      0.1093600
 day_length             -0.066437 0.021998 1.100e-03      0.0019857
 up_lakeMost            -2.193605 0.571631 2.858e-02      0.1022484
@@ -520,11 +698,13 @@ model.ow.f_beta_zi_zoib3 <- zoib(hab.prop ~ day_length*up_lake+tl_mm| 1 | 1,
 ```
 
 
-### 3.4. Fit a Bayesian zero-inflated beta regression model with MCMC process
+### 3.4. Fit a Bayesian zero-one-inflated beta regression model with MCMC process
 
 #### 3.4.1. Using package _brms_
 
 :books:`library(brms)`
+
+We specify family **_zero_one_inflated_beta_**
 
 ```
 model.ow.f_beta_zi_brm1 <- brm(hab.prop ~ day_length*up_lake+tl_mm +(1|tag_id),
@@ -563,10 +743,10 @@ model.ow.f_beta_zi_stan <- stan_betareg(hab.prop ~ day_length*up_lake+tl_mm +(da
 
 ## References
 
-Liu, F. & Kong, Y. 2015. ZOIB: an R Package for Bayesian Inferences in Beta and Zero One Inflated Beta Regression Models, The R Journal, 7(2):34-51
+- _Liu, F. & Kong, Y_. 2015. ZOIB: an R Package for Bayesian Inferences in Beta and Zero One Inflated Beta Regression Models, The R Journal, 7(2):34-51
 
-Smithson, M. & Verkuilen, J. 2006. A Better Lemon Squeezer? Maximum-Likelihood Regression with Beta-Distributed Dependent Variables. Psychological Methods, 11 (1), 54–71
+- _Rigby, R. A. & Stasinopoulos, D. M_. 2005. Generalized additive models for location, scale and shape,(with discussion), Appl. Statist., 54, part 3, pp 507-554
 
-
+- _Smithson, M. & Verkuilen, J_. 2006. A Better Lemon Squeezer? Maximum-Likelihood Regression with Beta-Distributed Dependent Variables. Psychological Methods, 11 (1), 54–71
 
 
