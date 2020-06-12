@@ -15,14 +15,6 @@ open_water_prop<-horiz_move[with(open_water_prop, order(tag_id,up_lake, date)),]
 
 ## 2. Multicolinearity tests
 
-:books:`library(corrplot)`
-
-```
-corr<-cor(open_water_prop[,c(3,5,6,7,11,12)], use="pairwise", method="spearman")
-corrplot(corr,method="number")
-```
-![Hab_prop](/Plots/Hab_prop_zoib0.png "Hab_prop")
-
 :books:`library(ppcor)`
 
 ```
@@ -44,70 +36,7 @@ k1size      0.005441638  0.155270414 -0.06519901 -0.08823289 -0.06144069  1.0000
 
 :books:`library(nlme)`
 
-#### 3.1.1. Full model
-
-```
-model.ow <- lme(asin(sqrt(hab.prop)) ~ temp.day*up_lake +day_length*up_lake+up_lake*tl_mm+temp.day*day_length, data = open_water_prop, random = ~1|tag_id, method = "REML", correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
-```
-
-Lets compare estimates of regression coefficients with and without scaling predictors
-
-#### 3.1.2. Final model (unscaled predictors)
-
-```
-model.ow.f <- lme(asin(sqrt(hab.prop)) ~  day_length*up_lake+tl_mm, data = open_water_prop ,random = ~1|tag_id, method = "REML", correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
-```
-```
-summary(model.ow.f)
-```
-```
-Linear mixed-effects model fit by REML
- Data: open_water_prop
-        AIC       BIC   logLik
-  -698.1296 -647.9909 358.0648
-
-Random effects:
- Formula: ~1 | tag_id
-        (Intercept)  Residual
-StdDev:    0.191679 0.2437836
-
-Correlation Structure: ARMA(1,1)
- Formula: ~date.num | tag_id
- Parameter estimate(s):
-      Phi1     Theta1
- 0.8167204 -0.3525310
-Fixed effects: asin(sqrt(hab.prop)) ~ day_length * up_lake + tl_mm
-                            Value  Std.Error   DF    t-value p-value
-(Intercept)            -0.1881128 0.29847195 1919 -0.6302528  0.5286
-day_length             -0.0182465 0.01120119 1919 -1.6289818  0.1035
-up_lakeMost            -0.3786813 0.24774028   22 -1.5285413  0.1406
-tl_mm                   0.0007454 0.00032128   22  2.3201986  0.0300
-day_length:up_lakeMost  0.0347729 0.01566051 1919  2.2204160  0.0265
- Correlation:
-                       (Intr) dy_lng up_lkM tl_mm
-day_length             -0.534
-up_lakeMost            -0.283  0.669
-tl_mm                  -0.810 -0.023 -0.161
-day_length:up_lakeMost  0.382 -0.715 -0.934  0.016
-
-Standardized Within-Group Residuals:
-       Min         Q1        Med         Q3        Max
--2.9547532 -0.3840864 -0.1747805  0.2897519  6.1412196
-
-Number of Observations: 1946
-Number of Groups: 25
-```
-```
-vif(model.ow.f)
-```
-```
-        day_length            up_lake              tl_mm day_length:up_lake
-          2.047923           9.431874           1.201934          10.251848
-```
-
-- There is collinearity from _up_lake_ so we should scale predictors
-
-#### 3.1.3. Final model (scaled predictors)
+**Final model (scaled predictors)**
 
 :books:`library(dplyr)`
 
@@ -115,7 +44,10 @@ vif(model.ow.f)
 open_water_prop_scale_p<-open_water_prop %>% mutate_at(c(7,11), funs(c(scale(.))))
 ```
 ```
-model.ow.f_scale_p <- lme(asin(sqrt(hab.prop)) ~  day_length*up_lake+tl_mm, data = open_water_prop_scale_p ,random = ~1|tag_id, method = "REML", correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
+model.ow.f_scale_p <- lme(asin(sqrt(hab.prop)) ~ day_length*up_lake+tl_mm,
+                                                 data = open_water_prop_scale_p,
+                                                 random = ~1|tag_id, method = "REML",
+                                                 correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
 ```
 ```
 summary(model.ow.f_scale_p)
@@ -165,11 +97,13 @@ vif(model.ow.f_scale_p)
           2.047923           1.202525           1.201934           2.048239
 ```
 
-### 3.2. Fit a beta regression model (distribution with logit/beta processes) using the package betareg
+### 3.2. Fit a beta regression model (distribution with logit/beta processes) using the package _betareg_
 
 :books:`library(betareg)`
 
-First, we need to check if there are NAs for the variable _hab.prop_. We can do this with the following code:
+- For beta regression (zero/one -inflated) models we need to perform some transformations to the response variable
+- First, we need to check if there are NAs for the variable _hab.prop_. We can do this with the following code:
+
 ```
 open_water_prop[is.na(open_water_prop$hab.prop),]
 ```
@@ -178,65 +112,33 @@ open_water_prop[is.na(open_water_prop$hab.prop),]
 
 **Note:** If we dont perform this transformation we get an error due to 0's and 1's contained in the extremes since the betareg function cant handle those values
 
-#### 3.2.1. Transform the response variable with values higher than 0 and lower than 1 but in close decimal place
+#### Transform the response variable with values higher than 0 and lower than 1 but in close decimal place
 
+Create a new variable _hab.prop_t_ with 0,1 values changed to 0.001,09999
 ```
-open_water_prop <- open_water_prop %>% mutate(hab.prop = replace(hab.prop, hab.prop == 1, 0.999))
-open_water_prop <- open_water_prop %>% mutate(hab.prop = replace(hab.prop, hab.prop == 0, 0.001))
-
-open_water_prop_scale_p <- open_water_prop_scale_p %>% mutate(hab.prop = replace(hab.prop, hab.prop == 1, 0.999))
-open_water_prop_scale_p <- open_water_prop_scale_p %>% mutate(hab.prop = replace(hab.prop, hab.prop == 0, 0.001))
+open_water_prop_scale_p <- open_water_prop_scale_p %>% mutate(hab.prop_t = replace(hab.prop, hab.prop == 1, 0.999))
+open_water_prop_scale_p <- open_water_prop_scale_p %>% mutate(hab.prop_t = replace(hab.prop_t, hab.prop == 0, 0.001))
 ```
-
-**Final model (unscaled predictors)**
-
-```
-model.ow.f_beta <- betareg(hab.prop ~  day_length*up_lake+tl_mm, data = open_water_prop ,random = ~1|tag_id, method = "Nelder-Mead", correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
-```
-```
-summary(model.ow.f_beta)
-```
-```
-Call:
-betareg(formula = hab.prop ~ day_length * up_lake + tl_mm, data = open_water_prop, random = ~1 | tag_id, method = "Nelder-Mead",
-    correlation = corARMA(value = c(0.4276, -0.9426), ~date.num | tag_id, p = 1, q = 1))
-
-Standardized weighted residuals 2:
-    Min      1Q  Median      3Q     Max
--1.5319 -0.5091 -0.0629  0.5215  3.0120
-
-Coefficients (mean model with logit link):
-                         Estimate Std. Error z value Pr(>|z|)
-(Intercept)            -2.7825714  0.3421519  -8.133  4.2e-16 ***
-day_length             -0.0490611  0.0223471  -2.195   0.0281 *
-up_lakeMost            -0.7548783  0.4861765  -1.553   0.1205
-tl_mm                   0.0018215  0.0001892   9.625  < 2e-16 ***
-day_length:up_lakeMost  0.0744568  0.0329860   2.257   0.0240 *
-
-Phi coefficients (precision model with identity link):
-      Estimate Std. Error z value Pr(>|z|)
-(phi)  1.78439    0.06611   26.99   <2e-16 ***
----
-Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-Type of estimator: ML (maximum likelihood)
-Log-likelihood:  4311 on 6 Df
-Pseudo R-squared: 0.192
-Number of iterations: 4483 (Nelder-Mead) + 5 (Fisher scoring)
-```
+**Note:** It is important that values are close to 0 and 1 because the odds will be much different (tending to infinite) if we add or substract more decimals (e.g. 0.00001, 0.99999)
 
 **Final model (scaled predictors)**
 
 ```
-model.ow.f_beta_scaled <- betareg(hab.prop ~  day_length*up_lake+tl_mm, data = open_water_prop_scale_p ,random = ~1|tag_id, method = "Nelder-Mead", correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
+model.ow.f_beta_scaled <- betareg(hab.prop_t ~  day_length*up_lake+tl_mm,
+                                  data = open_water_prop_scale_p,
+                                  random = ~1|tag_id,
+                                  method = "Nelder-Mead",
+                                  correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
 ```
 ```
 summary(model.ow.f_beta_scaled)
 ```
 ```
+
 Call:
-betareg(formula = hab.prop ~ day_length * up_lake + tl_mm, data = open_water_prop_scale_p, random = ~1 | tag_id, method = "Nelder-Mead",
-    correlation = corARMA(value = c(0.4276, -0.9426), ~date.num | tag_id, p = 1, q = 1))
+betareg(formula = hab.prop_t ~ day_length * up_lake + tl_mm, data = open_water_prop_scale_p, random = ~1 |
+    tag_id, method = "Nelder-Mead", correlation = corARMA(value = c(0.4276, -0.9426), ~date.num | tag_id,
+    p = 1, q = 1))
 
 Standardized weighted residuals 2:
     Min      1Q  Median      3Q     Max
@@ -262,79 +164,116 @@ Pseudo R-squared: 0.192
 Number of iterations: 2363 (Nelder-Mead) + 5 (Fisher scoring)
 ```
 
-#### 3.2.2. Transform the response variable following the recommendations by Smithson & Verkuilen (2006)
+#### Transform the response variable according to Smithson & Verkuilen (2006)
 
 The R documentation for the **_betareg_** package mentions the distribution proposed by these authors, which takes the form:
 
 **y’ = (y*(N - 1) + .5)/N**, where N is the sample size
 
-Calculate sample size
+I create custom function to transform the values of proportion of habitat use (_hab.prop_) following the former formula
+```
+df <- open_water_prop_scale_p
+id <- open_water_prop_scale_p$tag_id
+x <- open_water_prop_scale_p$hab.prop
+
+zero_one <- function(x)
+{
+   N = nrow(df)/(length(levels(id)))
+   d = (x*(N - 1) + .5)/N
+   return(d)
+}
+zero_one(x)
+```
+
+Create a new variable _hab.prop_tf_ with range of values as provided by the previous function
+```
+open_water_prop_scale_p <- open_water_prop_scale_p %>% mutate(hab.prop_tf = zero_one(x))
+```
+
+**Final model (scaled predictors)**
 
 ```
-nrow(open_water_prop)/(length(levels(open_water_prop$tag_id)))
+model.ow.f_beta_scaled <- betareg(hab.prop_tf ~ day_length*up_lake+tl_mm,
+                                                data = open_water_prop_scale_p,
+                                                random = ~1|tag_id, method = "Nelder-Mead",
+                                                correlation = corARMA(value = c(0.4276, -0.9426),~date.num|tag_id, p = 1, q=1))
 ```
 ```
-[1] 77.84
+summary(model.ow.f_beta_scaled)
 ```
+```
+Call:
+betareg(formula = hab.prop_tf ~ day_length * up_lake + tl_mm, data = open_water_prop_scale_p, random = ~1 | tag_id,
+    method = "Nelder-Mead", correlation = corARMA(value = c(0.4276, -0.9426), ~date.num | tag_id, p = 1, q = 1))
 
-open_water_prop$hab.prop <- (open_water_prop$hab.prop*(77.84-1) + 0.5)/77.84
+Standardized weighted residuals 2:
+    Min      1Q  Median      3Q     Max
+-1.4543 -0.4904 -0.0946  0.4322  3.1200
 
-open_water_prop$hab.prop_t <- with(open_water_prop, hab.prop*(77.84-1) + 0.5)/77.84)
+Coefficients (mean model with logit link):
+                       Estimate Std. Error z value Pr(>|z|)
+(Intercept)            -1.92357    0.04198 -45.820  < 2e-16 ***
+day_length             -0.07949    0.03308  -2.403   0.0163 *
+up_lakeMost             0.33857    0.05077   6.669 2.58e-11 ***
+tl_mm                   0.24825    0.02561   9.692  < 2e-16 ***
+day_length:up_lakeMost  0.11838    0.04837   2.448   0.0144 *
 
-hab.prop_df <- data.frame(open_water_prop$hab.prop)
-open_water_prop$hab.prop_t <- apply(hab.prop_df, 1, function(x) prod((hab.prop_df$open_water_prop.hab.prop*(77.84-1) + 0.5)/77.84))
+Phi coefficients (precision model with identity link):
+      Estimate Std. Error z value Pr(>|z|)
+(phi)   2.4997     0.0882   28.34   <2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
+Type of estimator: ML (maximum likelihood)
+Log-likelihood:  2827 on 6 Df
+Pseudo R-squared: 0.1923
+Number of iterations: 1739 (Nelder-Mead) + 2 (Fisher scoring)
+```
 
 ### 3.3. Fit a zero- /one- inflated beta regression model
 
 Now we fit a series of zero-inflated models using different packages on the original dataset without further transformation of the (0,1) bound
 
-```
-open_water_prop <- data.table(read_csv("open_water_prop.csv"))
-```
-```
-open_water_prop$up_lake <- as.factor(open_water_prop$up_lake)
-open_water_prop$tag_id <- as.factor(open_water_prop$tag_id)
-```
-
 #### 3.3.1. Using package _gamlss_
 
 :books:`library(gamlss)`
 
-The GAMLSS documentation refers to the fitting of GAM models for Location Scale and Shape (Rigby and Stasinopoulos, 2005). The models use a distributional regression approach where all the parameters of the conditional distribution of the response variable are modelled using explanatory variables (see [zoib R documentation](https://cran.r-project.org/web/packages/gamlss/gamlss.pdf))
+The GAMLSS R documentation refers to the fitting of GAM models for Location Scale and Shape (Rigby and Stasinopoulos, 2005). The models use a distributional regression approach where all the parameters of the conditional distribution of the response variable are modelled using explanatory variables (see [zoib R documentation](https://cran.r-project.org/web/packages/gamlss/gamlss.pdf))
 
 ##### 3.3.1.1. Fit final model
 
+- We specify family _BEZI_ instead of _BEINF_ since if use the non-transformed (0,1) distribution there is an error of "response variable out of range"
+- If instead we use the transformed variable _hab_prop_t_ the model fit well but it is not allright for a zero/one inflated beta distribution
+
+The GAMLSS documentantion states that:
+The function BEINF() defines the beta inflated distribution, a four parameter distribution, for a gamlss.family object to be used in GAMLSS fitting using the function gamlss(). The beta inflated is similar to the beta but allows zeros and ones as values for the response variable. The two
+extra parameters model the probabilities at zero and one.
+
+Thus, we use famiLY _BEZI_ for fitting a zero-inflated distribution and family _BEINF_ for a zero/one -inflated distribution (see [zoib R documentation, p. 20](https://cran.r-project.org/web/packages/gamlss.dist/gamlss.dist.pdf))
+
 ```
-model.ow.f_beta_zi_gamlss <- gamlss(hab.prop ~  day_length*up_lake+tl_mm,
-                                    data = open_water_prop,
-                                    random = ~1|tag_id,
-                                    family = BEZI,
-                                    correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
+model.ow.f_beta_zi_gamlss <- gamlss(hab.prop ~ day_length*up_lake+tl_mm,
+                                                  data = open_water_prop_scale_p,
+                                                  random = ~1|tag_id,
+                                                  family = BEINF,
+                                                  correlation = corARMA(value = c(0.4276, -0.9426),~date.num|tag_id, p = 1, q=1))
 ```
 ```
-GAMLSS-RS iteration 1: Global Deviance = -8493.518
-GAMLSS-RS iteration 2: Global Deviance = -8577.033
-GAMLSS-RS iteration 3: Global Deviance = -8606.78
-GAMLSS-RS iteration 4: Global Deviance = -8616.876
-GAMLSS-RS iteration 5: Global Deviance = -8620.174
-GAMLSS-RS iteration 6: Global Deviance = -8621.226
-GAMLSS-RS iteration 7: Global Deviance = -8621.556
-GAMLSS-RS iteration 8: Global Deviance = -8621.659
-GAMLSS-RS iteration 9: Global Deviance = -8621.691
-GAMLSS-RS iteration 10: Global Deviance = -8621.7
-GAMLSS-RS iteration 11: Global Deviance = -8621.703
-GAMLSS-RS iteration 12: Global Deviance = -8621.704
+GAMLSS-RS iteration 1: Global Deviance = 2069.06
+GAMLSS-RS iteration 2: Global Deviance = 2038.689
+GAMLSS-RS iteration 3: Global Deviance = 2038.665
+GAMLSS-RS iteration 4: Global Deviance = 2038.664
 ```
 ```
 summary(model.ow.f_beta_zi_gamlss)
 ```
 ```
 ******************************************************************
-Family:  c("BEZI", "Zero Inflated Beta")
+Family:  c("BEINF", "Beta Inflated")
 
-Call:  gamlss(formula = hab.prop ~ day_length * up_lake + tl_mm, family = BEZI,
-    data = open_water_prop, random = ~1 | tag_id, correlation = corARMA(value = c(0.4276,
+Call:  gamlss(formula = hab.prop ~ day_length * up_lake +
+    tl_mm, family = BEINF, data = open_water_prop_scale_p,
+    random = ~1 | tag_id, correlation = corARMA(value = c(0.4276,
         -0.9426), ~date.num | tag_id, p = 1, q = 1))
 
 Fitting method: RS()
@@ -342,38 +281,48 @@ Fitting method: RS()
 ------------------------------------------------------------------
 Mu link function:  logit
 Mu Coefficients:
-                         Estimate Std. Error t value Pr(>|t|)
-(Intercept)            -2.7814817  0.3402564  -8.175 5.29e-16 ***
-day_length             -0.0490482  0.0223462  -2.195   0.0283 *
-up_lakeMost            -0.7547071  0.4861934  -1.552   0.1208
-tl_mm                   0.0018209  0.0001886   9.656  < 2e-16 ***
-day_length:up_lakeMost  0.0744367  0.0329835   2.257   0.0241 *
+                       Estimate Std. Error t value Pr(>|t|)
+(Intercept)            -1.37949    0.06337 -21.769  < 2e-16 ***
+day_length             -0.17988    0.05219  -3.447 0.000579 ***
+up_lakeMost             0.42789    0.07431   5.758 9.85e-09 ***
+tl_mm                   0.25839    0.03773   6.848 1.00e-11 ***
+day_length:up_lakeMost  0.23869    0.06811   3.504 0.000468 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 ------------------------------------------------------------------
-Sigma link function:  log
+Sigma link function:  logit
 Sigma Coefficients:
             Estimate Std. Error t value Pr(>|t|)
-(Intercept)  0.57851    0.02477   23.36   <2e-16 ***
+(Intercept)  0.06401    0.03426   1.868   0.0619 .
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 ------------------------------------------------------------------
-Nu link function:  logit
+Nu link function:  log
 Nu Coefficients:
             Estimate Std. Error t value Pr(>|t|)
-(Intercept)   -24.87    2266.88  -0.011    0.991
+(Intercept)  0.22198    0.04573   4.854 1.31e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+------------------------------------------------------------------
+Tau link function:  log
+Tau Coefficients:
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept)  -4.4555     0.3181  -14.01   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 ------------------------------------------------------------------
 No. of observations in the fit:  1946
-Degrees of Freedom for the fit:  7
-      Residual Deg. of Freedom:  1939
-                      at cycle:  12
+Degrees of Freedom for the fit:  8
+      Residual Deg. of Freedom:  1938
+                      at cycle:  4
 
-Global Deviance:     -8621.704
-            AIC:     -8607.704
-            SBC:     -8568.69
+Global Deviance:     2038.664
+            AIC:     2054.664
+            SBC:     2099.252
 ******************************************************************
 ```
 
@@ -385,11 +334,11 @@ plot(model.ow.f_beta_zi_gamlss)
 ```
 ******************************************************************
 	 Summary of the Randomised Quantile Residuals
-                           mean   =  -0.1054905
-                       variance   =  0.8011242
-               coef. of skewness  =  1.354226
-               coef. of kurtosis  =  5.919767
-Filliben correlation coefficient  =  0.9499451
+                           mean   =  -0.00845896
+                       variance   =  0.9614488
+               coef. of skewness  =  0.02864597
+               coef. of kurtosis  =  3.196871
+Filliben correlation coefficient  =  0.9992626
 ******************************************************************
 ```
 ![Hab_prop](/Plots/Hab_prop_gamlss01.png "Hab_prop")
@@ -407,15 +356,15 @@ acfResid(model.ow.f_beta_zi_gamlss)
 centiles(model.ow.f_beta_zi_gamlss,xvar=open_water_prop$hab.prop)
 ```
 ```
-% of cases below  0.4 centile is  0
-% of cases below  2 centile is  0
-% of cases below  10 centile is  0.8735868
-% of cases below  25 centile is  28.31449
-% of cases below  50 centile is  64.69681
-% of cases below  75 centile is  81.65468
-% of cases below  90 centile is  92.49743
-% of cases below  98 centile is  98.04728
-% of cases below  99.6 centile is  98.86948
+% of cases below  0.4 centile is  55.24152
+% of cases below  2 centile is  55.24152
+% of cases below  10 centile is  55.24152
+% of cases below  25 centile is  55.24152
+% of cases below  50 centile is  55.24152
+% of cases below  75 centile is  77.74923
+% of cases below  90 centile is  90.69887
+% of cases below  98 centile is  97.79034
+% of cases below  99.6 centile is  100
 ```
 ![Hab_prop](/Plots/Hab_prop_gamlss03.png "Hab_prop")
 
@@ -423,76 +372,81 @@ centiles(model.ow.f_beta_zi_gamlss,xvar=open_water_prop$hab.prop)
 
 ```
 model.ow.f_beta_zi_gamlss_c.spline <- gamlss(hab.prop ~  scs(day_length, by="up_lake")+tl_mm,
-                                      data = open_water_prop,
+                                      data = open_water_prop_scale_p,
                                       random = ~1|tag_id,
-                                      family = BEZI,
+                                      family = BEINF,
                                       correlation = corARMA(value = c(0.4276,  -0.9426),~date.num|tag_id, p = 1, q=1))
 ```
 ```
-GAMLSS-RS iteration 1: Global Deviance = -8461.846
-GAMLSS-RS iteration 2: Global Deviance = -8538.867
-GAMLSS-RS iteration 3: Global Deviance = -8566.111
-GAMLSS-RS iteration 4: Global Deviance = -8575.328
-GAMLSS-RS iteration 5: Global Deviance = -8578.343
-GAMLSS-RS iteration 6: Global Deviance = -8579.309
-GAMLSS-RS iteration 7: Global Deviance = -8579.616
-GAMLSS-RS iteration 8: Global Deviance = -8579.713
-GAMLSS-RS iteration 9: Global Deviance = -8579.746
-GAMLSS-RS iteration 10: Global Deviance = -8579.755
-GAMLSS-RS iteration 11: Global Deviance = -8579.757
-GAMLSS-RS iteration 12: Global Deviance = -8579.759
-GAMLSS-RS iteration 13: Global Deviance = -8579.76
+GAMLSS-RS iteration 1: Global Deviance = 2089.491
+GAMLSS-RS iteration 2: Global Deviance = 2059.017
+GAMLSS-RS iteration 3: Global Deviance = 2059.049
+GAMLSS-RS iteration 4: Global Deviance = 2059.079
+GAMLSS-RS iteration 5: Global Deviance = 2059.084
+GAMLSS-RS iteration 6: Global Deviance = 2059.085
+GAMLSS-RS iteration 7: Global Deviance = 2059.085
 ```
 ```
 summary(model.ow.f_beta_zi_gamlss_c.spline)
 ```
 ```
 ******************************************************************
-Family:  c("BEZI", "Zero Inflated Beta")
+Family:  c("BEINF", "Beta Inflated")
 
 Call:  gamlss(formula = hab.prop ~ scs(day_length, by = "up_lake") +
-    tl_mm, family = BEZI, data = open_water_prop, random = ~1 |      tag_id, correlation = corARMA(value = c(0.4276, -0.9426),
-    ~date.num | tag_id, p = 1, q = 1))
+    tl_mm, family = BEINF, data = open_water_prop_scale_p,
+    random = ~1 | tag_id, correlation = corARMA(value = c(0.4276,
+        -0.9426), ~date.num | tag_id, p = 1, q = 1))
 
 Fitting method: RS()
 
 ------------------------------------------------------------------
 Mu link function:  logit
 Mu Coefficients:
-                                  Estimate Std. Error t value Pr(>|t|)
-(Intercept)                     -3.2726258  0.2706181 -12.093   <2e-16 ***
-scs(day_length, by = "up_lake") -0.0166307  0.0164947  -1.008    0.313
-tl_mm                            0.0020488  0.0001786  11.472   <2e-16 ***
+                                Estimate Std. Error t value Pr(>|t|)
+(Intercept)                     -1.10235    0.04173 -26.418   <2e-16 ***
+scs(day_length, by = "up_lake") -0.04332    0.03386  -1.279    0.201
+tl_mm                            0.27717    0.03638   7.618    4e-14 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 ------------------------------------------------------------------
-Sigma link function:  log
+Sigma link function:  logit
 Sigma Coefficients:
             Estimate Std. Error t value Pr(>|t|)
-(Intercept)  0.55349    0.02473   22.38   <2e-16 ***
+(Intercept)  0.08522    0.03411   2.499   0.0125 *
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 ------------------------------------------------------------------
-Nu link function:  logit
+Nu link function:  log
 Nu Coefficients:
             Estimate Std. Error t value Pr(>|t|)
-(Intercept)   -25.03    2266.88  -0.011    0.991
+(Intercept)  0.22198    0.04573   4.854 1.31e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+------------------------------------------------------------------
+Tau link function:  log
+Tau Coefficients:
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept)  -4.4555     0.3181  -14.01   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 ------------------------------------------------------------------
 NOTE: Additive smoothing terms exist in the formulas:
  i) Std. Error for smoothers are for the linear effect only.
-ii) Std. Error for the linear terms may not be reliable.
+ii) Std. Error for the linear terms maybe are not accurate.
 ------------------------------------------------------------------
 No. of observations in the fit:  1946
-Degrees of Freedom for the fit:  6.403116
-      Residual Deg. of Freedom:  1939.597
-                      at cycle:  13
+Degrees of Freedom for the fit:  21.94018
+      Residual Deg. of Freedom:  1924.06
+                      at cycle:  7
 
-Global Deviance:     -8579.76
-            AIC:     -8566.954
-            SBC:     -8531.266
+Global Deviance:     2059.085
+            AIC:     2102.966
+            SBC:     2225.25
 ******************************************************************
 ```
 
@@ -504,11 +458,11 @@ plot(model.ow.f_beta_zi_gamlss_c.spline)
 ```
 ******************************************************************
 	 Summary of the Randomised Quantile Residuals
-                           mean   =  -0.1033472
-                       variance   =  0.8072602
-               coef. of skewness  =  1.396926
-               coef. of kurtosis  =  5.814125
-Filliben correlation coefficient  =  0.9429908
+                           mean   =  -0.006583857
+                       variance   =  0.9630601
+               coef. of skewness  =  0.04277548
+               coef. of kurtosis  =  3.11282
+Filliben correlation coefficient  =  0.9991167
 ******************************************************************
 ```
 ![Hab_prop](/Plots/Hab_prop_gamlss04.png "Hab_prop")
@@ -526,15 +480,15 @@ acfResid(model.ow.f_beta_zi_gamlss_c.spline)
 centiles(model.ow.f_beta_zi_gamlss_c.spline,xvar=open_water_prop$hab.prop)
 ```
 ```
-% of cases below  0.4 centile is  0
-% of cases below  2 centile is  0
-% of cases below  10 centile is  2.466598
-% of cases below  25 centile is  26.77287
-% of cases below  50 centile is  65.00514
-% of cases below  75 centile is  80.78109
-% of cases below  90 centile is  91.67523
-% of cases below  98 centile is  97.99589
-% of cases below  99.6 centile is  98.97225
+% of cases below  0.4 centile is  55.24152
+% of cases below  2 centile is  55.24152
+% of cases below  10 centile is  55.24152
+% of cases below  25 centile is  55.24152
+% of cases below  50 centile is  55.24152
+% of cases below  75 centile is  76.92703
+% of cases below  90 centile is  91.00719
+% of cases below  98 centile is  97.73895
+% of cases below  99.6 centile is  100
 ```
 ![Hab_prop](/Plots/Hab_prop_gamlss06.png "Hab_prop")
 
@@ -557,8 +511,8 @@ The **_zoib_** function fits a zero-one-inflated regression model and obtains th
 
 ```
 model.ow.f_beta_zi_zoib1 <- zoib(hab.prop ~ day_length*up_lake+tl_mm | 1 | 1,
-                                            data=open_water_prop,
-                                            joint = FALSE, random=1, EUID=open_water_prop$tag_id,
+                                            data=open_water_prop_scale_p,
+                                            joint = FALSE, random=1, EUID=open_water_prop_scale_p$tag_id,
                                             zero.inflation = FALSE, one.inflation = FALSE,
                                             n.iter=3200, n.thin=15, n.burn=200)
 ```
@@ -665,38 +619,6 @@ abline(0,1,col='red')
 ```
 ![Hab_prop](/Plots/Hab_prop_zoib15.png "Hab_prop")
 
-**Plot credible intervals of predictions**
-
-xnew <- data.frame(day_length = c(15, 20), tl_mm = c(7, 15), up_lake = factor(c(1, 2), levels = 1:2))
-predictions <- pred.zoib(model.ow.f_beta_zi_zoib1, xnew)
-
-predictions <- data.frame(temp = seq(100, 600, 0.01), pred$summary)
-
-ggplotly(
-         ggplot() +
-         geom_point(data = open_water_prop,
-                           aes(x = day_length, y = hab.prop, fill = up_lake),
-                           size = 4, shape = 21) +
-                           xlim(100, 600) +
-         geom_line(data = predictions, aes(y = mean, x = day_length), col="red") +
-         geom_ribbon(data = predictions, aes(ymin= X2.5., ymax = X97.5., x = day_length), alpha = 0.3) +
-         theme_classic())
-
-
-```
-model.ow.f_beta_zi_zoib2 <- zoib(hab.prop ~ day_length*up_lake+tl_mm|1|day_length*up_lake+tl_mm|1,
-                                            data = open_water_prop, random = 1, EUID= open_water_prop$tag_id,
-                                            zero.inflation = TRUE, one.inflation = FALSE, joint = FALSE,
-                                            n.iter=5000, n.thin=20, n.burn=1000)
-```
-```
-model.ow.f_beta_zi_zoib3 <- zoib(hab.prop ~ day_length*up_lake+tl_mm| 1 | 1,
-                                            data=open_water_prop,
-                                            joint = FALSE, random=1, EUID=open_water_prop$tag_id,
-                                            zero.inflation = FALSE, one.inflation = FALSE,
-                                            n.iter=3200, n.thin=15, n.burn=200)
-```
-
 
 ### 3.4. Fit a Bayesian zero-one-inflated beta regression model with MCMC process
 
@@ -727,6 +649,7 @@ model.ow.f_beta_zi_brm2 <- brm(hab.prop ~ day_length*up_lake+tl_mm +(1|tag_id),
 ```
 open_water_prop <- as.data.table(open_water_prop)
 ```
+```
 model.ow.f_beta_zi_stan <- stan_betareg(hab.prop ~ day_length*up_lake+tl_mm +(date.num|tag_id),
                                                    data = open_water_prop,
                                                    link = "logit",
@@ -737,8 +660,7 @@ model.ow.f_beta_zi_stan <- stan_betareg(hab.prop ~ day_length*up_lake+tl_mm +(da
                                                    link = "logit",
                                                    seed = 12345)
 
-model.ow.f_beta_zi_stan <- stan_betareg(hab.prop ~ day_length*up_lake+tl_mm +(date.num|tag_id), data = open_water_prop, link = "logit", link.phi = "log",
-                     cores = 4, seed = 12345)
+model.ow.f_beta_zi_stan <- stan_betareg(hab.prop ~ day_length*up_lake+tl_mm +(date.num|tag_id), data = open_water_prop, link = "logit", link.phi = "log", cores = 4, seed = 12345)
 ```
 
 ## References
