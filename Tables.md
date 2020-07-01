@@ -1,3 +1,10 @@
+```{r, results='asis'}
+
+stargazer(m_vert_r_7,m_vert_r_2,m_vert_r_4,m_vert_r_1,m_vert_r_3,
+          dep.var.labels=  "Vertical range use: log(V-KS)",
+          covariate.labels=c("(Incercept)","Daily temperature × Lake(LSCL)","Day Length × Lake(LSCL)","Day Length × Body Length","Daily temperature","Day Length","Lake(LSCL)","Body Length"),
+          ci = F,intercept.bottom = T, align=TRUE, order=c("Constant","temp.day:up_lake0","day_length:up_lake0","day_length:tl_mm","temp.day","day_length","up_lake0","tl_mm"),title="Vertical range")
+```
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
 % Date and time: Wed, Jul 01, 2020 - 09:12:35 AM
 % Requires LaTeX packages: dcolumn 
