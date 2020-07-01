@@ -5,6 +5,7 @@ stargazer(m_vert_r_7,m_vert_r_2,m_vert_r_4,m_vert_r_1,m_vert_r_3,
           covariate.labels=c("(Incercept)","Daily temperature × Lake(LSCL)","Day Length × Lake(LSCL)","Day Length × Body Length","Daily temperature","Day Length","Lake(LSCL)","Body Length"),
           ci = F,intercept.bottom = T, align=TRUE, order=c("Constant","temp.day:up_lake0","day_length:up_lake0","day_length:tl_mm","temp.day","day_length","up_lake0","tl_mm"),title="Vertical range")
 ```
+```
 % Table created by stargazer v.5.2.2 by Marek Hlavac, Harvard University. E-mail: hlavac at fas.harvard.edu
 % Date and time: Wed, Jul 01, 2020 - 09:12:35 AM
 % Requires LaTeX packages: dcolumn 
@@ -53,3 +54,4 @@ Bayesian Inf. Crit. & \multicolumn{1}{c}{4,694.080} & \multicolumn{1}{c}{4,701.0
 \textit{Note:}  & \multicolumn{5}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
 \end{tabular} 
 \end{table} 
+```
